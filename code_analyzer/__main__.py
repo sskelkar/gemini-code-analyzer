@@ -41,7 +41,7 @@ def main():
         "--language",
         type=str,
         required=True,
-        choices=["ruby"], # Add 'kotlin' here when implemented
+        choices=["ruby", "golang"], # Add 'kotlin' here when implemented
         help="The programming language of the project."
     )
     args = parser.parse_args()

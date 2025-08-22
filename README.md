@@ -10,6 +10,12 @@ This tool requires language-specific analyzers to be installed.
     - Ruby
     - `flog` gem (`gem install flog`)
 
+- **For Golang analysis:**
+    - Go
+    - `gocyclo` tool (`go install github.com/fzipp/gocyclo/cmd/gocyclo@latest`)
+    - Ensure your Go bin directory is in your PATH. Add the following to your `~/.zshrc` or `~/.bash_profile`:
+      `export PATH=$PATH:$(go env GOPATH)/bin`
+
 ## Usage
 
 The tool requires you to specify the language of the project you want to analyze.
@@ -17,6 +23,9 @@ The tool requires you to specify the language of the project you want to analyze
 ```bash
 # For a Ruby project
 python -m code_analyzer /path/to/your/project --language ruby
+
+# For a Golang project
+python -m code_analyzer /path/to/your/project --language golang
 ```
 
 ## Metrics Reported

@@ -20,16 +20,16 @@ The tool's support for a language is dependent on having a suitable analysis eng
 - **Prerequisites:** Ruby, `gem install flog`
 - **File Discovery:** Finds `*.rb` files.
 
-### 3.2. Kotlin (Planned)
-- **Engine:** `detekt`
-- **Prerequisites:** Java, `detekt-cli` installed.
-- **File Discovery:** Finds `*.kt` and `*.kts` files.
+### 3.2. Golang
+- **Engine:** `gocyclo`
+- **Prerequisites:** Go, `go install github.com/fzipp/gocyclo/cmd/gocyclo@latest`, and the Go bin directory in the system PATH.
+- **File Discovery:** Finds `*.go` files.
 
 ## 4. CLI Interface
 
 The tool will be enhanced to accept a language specifier.
 
-`python -m code_analyzer DIRECTORY --language [ruby|kotlin]`
+`python -m code_analyzer DIRECTORY --language [ruby|golang]`
 
 - In the future, the `--language` flag may become optional as the tool could auto-detect the project type.
 
