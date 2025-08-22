@@ -6,7 +6,7 @@ from collections import defaultdict
 
 # --- Language-Specific Implementations --- #
 
-# --- Ruby / Flog --- #
+# --- Ruby / Flog ---
 def _find_ruby_files(directory):
     search_path = os.path.join(directory, "**", "*.rb")
     return glob.glob(search_path, recursive=True)
@@ -26,14 +26,13 @@ def _parse_flog_total(flog_text):
     except (ValueError, IndexError):
         return None
 
-# --- Golang / Gocyclo --- #
+# --- Golang / Gocyclo ---
 def _find_go_files(directory):
     search_path = os.path.join(directory, "**", "*.go")
     return glob.glob(search_path, recursive=True)
 
 def _run_gocyclo(directory):
     try:
-        # Exclude vendor directories and test files which is a common practice
         result = subprocess.run(["gocyclo", "-avg", "-over", "0", "."], cwd=directory, capture_output=True, text=True, check=True)
         return result.stdout, None
     except FileNotFoundError:
@@ -48,14 +47,12 @@ def _parse_gocyclo_output(gocyclo_text):
             parts = line.split()
             score = int(parts[0])
             file_path = parts[3].split(':')[0]
-            # gocyclo runs from within the directory, so path is relative
-            # We don't have the full path here, but it's sufficient for reporting
             file_scores[file_path] += score
         except (ValueError, IndexError):
             continue
     return list(file_scores.items())
 
-# --- Analyzer Configuration (Strategy Pattern) --- #
+# --- Analyzer Configuration (Strategy Pattern) ---
 
 ANALYZER_CONFIG = {
     "ruby": {
@@ -72,7 +69,7 @@ ANALYZER_CONFIG = {
     },
 }
 
-# --- Generic Analysis Orchestrator --- #
+# --- Generic Analysis Orchestrator ---
 
 def _get_loc(file_path):
     try:
@@ -97,42 +94,48 @@ def _calculate_summary(file_scores, total_loc):
         "percentile_95_complexity": percentile_avg,
     }
 
+def _perform_file_by_file_analysis(config, directory):
+    files = config["file_finder"](directory)
+    if not files:
+        return None, None, "No source files found."
+    file_scores, total_loc = [], 0
+    for file_path in files:
+        output, err = config["analyzer_func"](file_path)
+        if err:
+            return None, None, err
+        score = config["parser_func"](output)
+        if score is not None:
+            file_scores.append((file_path, score))
+            total_loc += _get_loc(file_path)
+            print(f".", end="", flush=True)
+    return file_scores, total_loc, None
+
+def _perform_project_analysis(config, directory):
+    output, err = config["analyzer_func"](directory)
+    if err:
+        return None, None, err
+    file_scores = config["parser_func"](output)
+    files = config["file_finder"](directory)
+    total_loc = sum(_get_loc(f) for f in files)
+    return file_scores, total_loc, None
+
 def run_analysis(language, directory):
     if language not in ANALYZER_CONFIG:
         return {"error": f"Language '{language}' is not supported."}
 
     config = ANALYZER_CONFIG[language]
-    analysis_mode = config["analysis_mode"]
-    
-    print(f"Running {language.capitalize()} analyzer ({analysis_mode} mode)...")
+    mode = config["analysis_mode"]
+    print(f"Running {language.capitalize()} analyzer ({mode} mode)...")
 
-    if analysis_mode == "file-by-file":
-        files = config["file_finder"](directory)
-        if not files:
-            return {"error": "No source files found."}
-        file_scores = []
-        total_loc = 0
-        for file_path in files:
-            output, err = config["analyzer_func"](file_path)
-            if err:
-                return {"error": err}
-            score = config["parser_func"](output)
-            if score is not None:
-                file_scores.append((file_path, score))
-                total_loc += _get_loc(file_path)
-                print(f".", end="", flush=True)
-    
-    elif analysis_mode == "project":
-        output, err = config["analyzer_func"](directory)
-        if err:
-            return {"error": err}
-        file_scores = config["parser_func"](output)
-        # Get total LOC for all found files
-        files = config["file_finder"](directory)
-        total_loc = sum(_get_loc(f) for f in files)
-
+    if mode == "file-by-file":
+        file_scores, total_loc, error = _perform_file_by_file_analysis(config, directory)
+    elif mode == "project":
+        file_scores, total_loc, error = _perform_project_analysis(config, directory)
     else:
-        return {"error": f"Unknown analysis mode: {analysis_mode}"}
+        error = f"Unknown analysis mode: {mode}"
+
+    if error:
+        return {"error": error}
 
     summary = _calculate_summary(file_scores, total_loc)
     file_scores.sort(key=lambda item: item[1], reverse=True)
